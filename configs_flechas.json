@@ -1,0 +1,22 @@
+{
+    "Flecha S version": {
+        "color": "#2d2d2d",
+        "grosor": 3.5,
+        "punta": 0.35
+    },
+    "Flecha negra": {
+        "color": "black",
+        "grosor": 4.0,
+        "punta": 0.85
+    },
+    "Flecha Azul": {
+        "color": "blue",
+        "grosor": 4.0,
+        "punta": 0.85
+    },
+    "Flecha Roja": {
+        "color": "red",
+        "grosor": 2.5,
+        "punta": 0.75
+    }
+}
