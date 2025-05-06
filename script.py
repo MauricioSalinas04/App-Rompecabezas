@@ -456,6 +456,145 @@ def abrir_proyecto():
         messagebox.showerror("Error", f"Error al abrir el archivo: {str(e)}")
         return False
 
+def exportar_imagen(modo="normal", filename=None):
+    """Exporta la imagen del rompecabezas en diferentes modos."""
+    if not filename:
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".png",
+            filetypes=[("PNG files", "*.png"), ("All files", "*.*")]
+        )
+    
+    if not filename:
+        return False
+        
+    try:
+        # Crear una nueva figura temporal para la exportación
+        temp_fig, temp_ax = plt.subplots(figsize=(6, 6))
+        
+        # Dibujar grilla base
+        for x in range(tamaño_grilla + 1):
+            temp_ax.plot([x, x], [0, tamaño_grilla], color='black', linewidth=0.5)
+        for y in range(tamaño_grilla + 1):
+            temp_ax.plot([0, tamaño_grilla], [y, y], color='black', linewidth=0.5)
+            
+        # Configurar diferentes modos de visualización
+        if modo == "solo_letras":
+            # Solo cuadros con letras
+            for letra in letras:
+                x, y = letra["pos"]
+                temp_ax.add_patch(patches.Rectangle((x, y), 1, 1, 
+                    facecolor=letra["fondo"], edgecolor='black'))
+                temp_ax.text(x + 0.5, y + 0.5, letra["texto"], 
+                    ha='center', va='center', color=letra["color"], 
+                    fontsize=180/tamaño_grilla, weight='bold')
+                    
+        elif modo == "solo_numeros":
+            # Cuadros con números en lugar de letras
+            for letra in letras:
+                x, y = letra["pos"]
+                temp_ax.add_patch(patches.Rectangle((x, y), 1, 1, 
+                    facecolor=letra["fondo"], edgecolor='black'))
+                if (x, y) in recorridos:
+                    temp_ax.text(x + 0.5, y + 0.5, str(recorridos[(x, y)]), 
+                        ha='center', va='center', color='white', 
+                        fontsize=180/tamaño_grilla, weight='bold')
+                        
+        elif modo == "completo_aqua":
+            # Versión completa con números en verde claro
+            # Primero dibujamos las flechas para que queden detrás de los cuadros
+            for flecha in flechas:
+                origen = flecha["origen"]
+                destino = flecha["destino"]
+                x1, y1 = origen
+                x2, y2 = destino
+                direction = flecha["dir"]
+                config = flecha["config"]
+
+                if direction == 0:  # Vertical hacia abajo
+                    xi = 0.5
+                    yi = 1
+                elif direction == 1:  # Vertical hacia arriba
+                    xi = 0.5
+                    yi = 0
+                elif direction == 2:  # Horizontal hacia derecha
+                    xi = 1
+                    yi = 0.5
+                elif direction == 3:  # Horizontal hacia izquierda
+                    xi = 0
+                    yi = 0.5
+
+                temp_ax.arrow(
+                    x1 + xi, y1 + yi,
+                    x2 - x1, y2 - y1,
+                    width=config["grosor"] * 0.1,
+                    head_width=config["punta"],
+                    head_length=config["punta"],
+                    fc=config["color"],
+                    ec=config["color"],
+                    length_includes_head=True,
+                    zorder=3
+                )
+
+            # Luego dibujamos los cuadros y números
+            for letra in letras:
+                x, y = letra["pos"]
+                temp_ax.add_patch(patches.Rectangle((x, y), 1, 1, 
+                    facecolor=letra["fondo"], edgecolor='black', zorder=4))
+                if (x, y) in recorridos:
+                    temp_ax.text(x + 0.5, y + 0.5, str(recorridos[(x, y)]), 
+                        ha='center', va='center', color='#b9f4b2', 
+                        fontsize=180/tamaño_grilla, weight='bold', zorder=5)
+            
+            # Agregar flechas
+            for flecha in flechas:
+                origen = flecha["origen"]
+                destino = flecha["destino"]
+                temp_ax.annotate("", xy=(destino[0] + 0.5, destino[1] + 0.5),
+                    xytext=(origen[0] + 0.5, origen[1] + 0.5),
+                    arrowprops=dict(arrowstyle='->',
+                                  color=flecha["config"]["color"],
+                                  lw=flecha["config"]["grosor"]))
+        
+        # Configuración común para todos los modos
+        temp_ax.set_xlim(-0.5, tamaño_grilla + 0.5)
+        temp_ax.set_ylim(-0.5, tamaño_grilla + 0.5)
+        temp_ax.set_aspect('equal')
+        temp_ax.axis('off')
+        
+        # Guardar y cerrar la figura temporal
+        temp_fig.savefig(filename, bbox_inches='tight', dpi=300)
+        plt.close(temp_fig)
+        
+        messagebox.showinfo("Éxito", "Imagen exportada correctamente")
+        return True
+        
+    except Exception as e:
+        messagebox.showerror("Error", f"Error al exportar la imagen: {str(e)}")
+        return False
+
+def exportar_todas_versiones():
+    """Exporta todas las versiones del rompecabezas."""
+    directory = filedialog.askdirectory(title="Selecciona carpeta para guardar las imágenes")
+    if not directory:
+        return False
+
+    try:
+        # Exportar versión M (solo letras)
+        exportar_imagen("solo_letras", filename=os.path.join(directory, "puzzle_M.png"))
+        
+        # Exportar versión P (solo números)
+        exportar_imagen("solo_numeros", filename=os.path.join(directory, "puzzle_P.png"))
+        
+        # Exportar versión S (completa con números aqua)
+        exportar_imagen("completo_aqua", filename=os.path.join(directory, "puzzle_S.png"))
+        
+        messagebox.showinfo("Éxito", "Todas las versiones han sido exportadas correctamente")
+        return True
+        
+    except Exception as e:
+        messagebox.showerror("Error", f"Error al exportar las imágenes: {str(e)}")
+        return False
+
 
 ###################################################################################
 # Interfaz
@@ -475,10 +614,24 @@ menu_archivo.add_command(label="Abrir", command=abrir_proyecto, accelerator="Ctr
 menu_archivo.add_command(label="Guardar", command=guardar_proyecto, accelerator="Ctrl+S")
 menu_archivo.add_command(label="Guardar como...", command=guardar_como, accelerator="Ctrl+Shift+S")
 menu_archivo.add_separator()
-menu_archivo.add_command(label="Exportar", command=lambda: print("Exportar - Función por implementar"))
+
+# Actualizar el menú Archivo
+menu_exportar = tk.Menu(menu_archivo, tearoff=0)
+menu_archivo.add_cascade(label="Exportar como", menu=menu_exportar)
+menu_exportar.add_command(label="M version", 
+    command=lambda: exportar_imagen("solo_letras"))
+menu_exportar.add_command(label="P version", 
+    command=lambda: exportar_imagen("solo_numeros"))
+menu_exportar.add_command(label="S version", 
+    command=lambda: exportar_imagen("completo_aqua"))
+menu_exportar.add_separator()
+menu_exportar.add_command(label="Exportar todas las versiones", 
+    command=lambda: exportar_todas_versiones())
+
 menu_archivo.add_command(label="Importar Promedios", command=lambda: print("Importar - Función por implementar"))
 menu_archivo.add_separator()
 menu_archivo.add_command(label="Cerrar", command=root.quit)
+
 
 panel_controles = tk.Frame(root, width=200, bg="lightgray")
 panel_controles.pack(side=tk.LEFT, fill=tk.Y)

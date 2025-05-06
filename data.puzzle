@@ -1,17 +1,26 @@
 {
     "metadata": {
         "version": "1.0",
-        "date_created": "2025-05-05 20:20:58",
+        "date_created": "2025-05-05 20:40:42",
         "grid_size": 8
     },
     "elements": {
         "squares": [
             {
                 "position": [
-                    4,
-                    0
+                    3,
+                    2
                 ],
                 "text": "A",
+                "color": "white",
+                "background": "black"
+            },
+            {
+                "position": [
+                    6,
+                    0
+                ],
+                "text": "B",
                 "color": "white",
                 "background": "black"
             }
@@ -19,23 +28,104 @@
         "arrows": [
             {
                 "origin": [
-                    4,
+                    3,
+                    2
+                ],
+                "destination": [
+                    7,
+                    2
+                ],
+                "direction": 2,
+                "config": {
+                    "color": "#2d2d2d",
+                    "thickness": 3.5,
+                    "head_size": 0.35
+                }
+            },
+            {
+                "origin": [
+                    3,
+                    2
+                ],
+                "destination": [
+                    0,
+                    2
+                ],
+                "direction": 3,
+                "config": {
+                    "color": "#2d2d2d",
+                    "thickness": 3.5,
+                    "head_size": 0.35
+                }
+            },
+            {
+                "origin": [
+                    3,
+                    2
+                ],
+                "destination": [
+                    3,
+                    0
+                ],
+                "direction": 1,
+                "config": {
+                    "color": "#2d2d2d",
+                    "thickness": 3.5,
+                    "head_size": 0.35
+                }
+            },
+            {
+                "origin": [
+                    6,
+                    0
+                ],
+                "destination": [
+                    7,
+                    0
+                ],
+                "direction": 2,
+                "config": {
+                    "color": "#2d2d2d",
+                    "thickness": 3.5,
+                    "head_size": 0.35
+                }
+            },
+            {
+                "origin": [
+                    6,
+                    0
+                ],
+                "destination": [
+                    6,
+                    1
+                ],
+                "direction": 0,
+                "config": {
+                    "color": "#2d2d2d",
+                    "thickness": 3.5,
+                    "head_size": 0.35
+                }
+            },
+            {
+                "origin": [
+                    6,
                     0
                 ],
                 "destination": [
                     4,
-                    7
+                    0
                 ],
-                "direction": 0,
+                "direction": 3,
                 "config": {
-                    "color": "black",
-                    "thickness": 4.0,
-                    "head_size": 0.85
+                    "color": "#2d2d2d",
+                    "thickness": 3.5,
+                    "head_size": 0.35
                 }
             }
         ]
     },
     "routes": {
-        "4,0": 7
+        "3,2": 9,
+        "6,0": 4
     }
 }
