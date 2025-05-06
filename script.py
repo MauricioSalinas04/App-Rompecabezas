@@ -1,10 +1,14 @@
 import tkinter as tk
 from tkinter import simpledialog, colorchooser
+from tkinter import messagebox
+from tkinter import filedialog
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import json
 import os
+from datetime import datetime
+
 
 # Configuración inicial
 config_flecha = {
@@ -47,15 +51,18 @@ def dibujar_grilla(tamaño):
         ax.plot([0, tamaño], [y, y], color='black', linewidth=0.5)
 
 def agregar_letras(letras):
+    # Calcular el tamaño de fuente base según el tamaño de la grilla
+    tamaño_fuente_base = 180 / tamaño_grilla
+    
     for letra in letras:
         x, y = letra["pos"]
         ax.add_patch(patches.Rectangle((x, y), 1, 1, facecolor=letra["fondo"], edgecolor='black', zorder=4))
         ax.text(x + 0.5, y + 0.5, letra["texto"], ha='center', va='center',
-                color=letra["color"], fontsize=14, weight='bold', zorder=5)
+                color=letra["color"], fontsize=tamaño_fuente_base, weight='bold', zorder=5)
         key = (x, y)
         if key in recorridos:
-            ax.text(x + 0.5, y + 0.2, f"🡺{recorridos[key]}", ha='center', va='center',
-                    color='darkgreen', fontsize=10, zorder=6)
+            ax.text(x + 0.5, y + 0.2, f"{recorridos[key]}", ha='center', va='center',
+                    color='white', fontsize=tamaño_fuente_base * 0.6, zorder=6)
 
 def agregar_flechas(flechas):
     for f in flechas:
@@ -66,12 +73,19 @@ def agregar_flechas(flechas):
         dx = x2 - x1
         dy = y2 - y1
 
-        if direction == 0:  #Vertical
-            yi = 1
+        if direction == 0:  #Vertical hacia abajo
             xi = 0.5
-        elif direction == 1:
+            yi = 1
+        elif direction == 1:  #Vertical hacia arriba
+            xi = 0.5
+            yi = 0
+        elif direction == 2:  #Horizontal hacia derecha
             xi = 1
-            yi = 0.5    
+            yi = 0.5
+        elif direction == 3:  #Horizontal hacia izquierda
+            xi = 0
+            yi = 0.5
+                
 
         ax.arrow(
             x1 + xi, y1 + yi,
@@ -84,6 +98,7 @@ def agregar_flechas(flechas):
             length_includes_head=True,
             zorder=3
         )
+        
 
 def actualizar_canvas():
     ax.set_xlim(0, tamaño_grilla)
@@ -119,6 +134,53 @@ def activar_modo_agregar_flecha():
     origen_temporal = None
     mostrar_config_flecha()
 
+# Agregar esta función con las otras funciones de modo
+def activar_modo_eliminar():
+    global modo_actual, origen_temporal
+    modo_actual = 'eliminar'
+    origen_temporal = None
+    ocultar_config_flecha()
+
+def obtener_direccion_flecha(origen, destino):
+    """
+    Determines the direction of an arrow based on its origin and destination.
+
+    Parameters:
+        origen (tuple): A tuple (x, y) representing the starting point of the arrow.
+        destino (tuple): A tuple (x, y) representing the ending point of the arrow.
+
+    Returns:
+        int: An integer representing the direction of the arrow:
+             0 - Down (vertical),
+             1 - Up (vertical),
+             2 - Right (horizontal),
+             3 - Left (horizontal).
+    """
+    if origen[0] == destino[0]: 
+        if destino[1] > origen[1]:
+            return 0  
+        else:
+            return 1
+    elif origen[1] == destino[1]:  
+        if destino[0] > origen[0]:
+            return 2  
+        else:
+            return 3
+
+def distancia_punto_a_linea(punto, inicio, fin):
+    """Calcula la distancia de un punto a una línea"""
+    x, y = punto
+    x1, y1 = inicio
+    x2, y2 = fin
+    
+    # Si la línea es vertical
+    if x1 == x2:
+        return abs(x - x1) if min(y1, y2) <= y <= max(y1, y2) else float('inf')
+    # Si la línea es horizontal
+    if y1 == y2:
+        return abs(y - y1) if min(x1, x2) <= x <= max(x1, x2) else float('inf')
+    return float('inf')  
+        
 def manejar_click(event):
     global origen_temporal
     if event.xdata is None or event.ydata is None:
@@ -131,7 +193,7 @@ def manejar_click(event):
     if modo_actual == 'agregar_cuadro':
         letra = simpledialog.askstring("Letra", "Ingresa la letra para esta celda:")
         if letra:
-            letras.append({"texto": letra.upper(), "pos": (x, y), "color": "black", "fondo": "lightblue"})
+            letras.append({"texto": letra.upper(), "pos": (x, y), "color": "white", "fondo": "black"})
             dibujar_grilla(tamaño_grilla)
             agregar_letras(letras)
             agregar_flechas(flechas)
@@ -147,19 +209,13 @@ def manejar_click(event):
             if destino == origen_temporal:
                 origen_temporal = None
                 return
-            
-            if origen_temporal[0] == destino[0]:  # Flecha vertical
-                direc = 0
-            elif origen_temporal[1] == destino[1]:  # Flecha horizontal
-                direc = 1
-            
                 
             if origen_temporal[0] == destino[0] or origen_temporal[1] == destino[1]:
                 flechas.append({
                     "origen": origen_temporal,
                     "destino": destino,
                     "config": config_flecha.copy(),
-                    "dir": direc
+                    "dir": obtener_direccion_flecha(origen_temporal, destino)
                 })
                 recorrido = abs(destino[0] - origen_temporal[0]) + abs(destino[1] - origen_temporal[1])
                 recorridos[origen_temporal] = recorridos.get(origen_temporal, 0) + recorrido
@@ -171,6 +227,54 @@ def manejar_click(event):
             else:
                 print("Solo se permiten flechas horizontales o verticales.")
                 origen_temporal = None
+                
+    elif modo_actual == 'eliminar':
+        # Verificar si hay un cuadro en la posición
+        cuadro_eliminado = any(letra["pos"] == (x, y) for letra in letras)
+        if cuadro_eliminado:
+            # Eliminar el cuadro
+            letras[:] = [l for l in letras if l["pos"] != (x, y)]
+
+            # Eliminar todas las flechas que salen del cuadro eliminado
+            flechas[:] = [f for f in flechas if f["origen"] != (x, y)]
+
+            # Eliminar el recorrido asociado al cuadro
+            if (x, y) in recorridos:
+                del recorridos[(x, y)]
+        else:
+            # Buscar flecha cercana al clic
+            punto_clic = (event.xdata, event.ydata)
+            flecha_a_eliminar = None
+            distancia_minima = 0.3
+
+            for i, f in enumerate(flechas):
+                distancia = distancia_punto_a_linea(
+                    punto_clic, 
+                    (f["origen"][0] + 0.5, f["origen"][1] + 0.5),
+                    (f["destino"][0] + 0.5, f["destino"][1] + 0.5)
+                )
+                if distancia < distancia_minima:
+                    flecha_a_eliminar = i
+                    break
+                
+            if flecha_a_eliminar is not None:
+                # Actualizar recorrido antes de eliminar la flecha
+                origen = flechas[flecha_a_eliminar]["origen"]
+                destino = flechas[flecha_a_eliminar]["destino"]
+                recorrido = abs(destino[0] - origen[0]) + abs(destino[1] - origen[1])
+                if origen in recorridos:
+                    recorridos[origen] -= recorrido
+                    if recorridos[origen] <= 0:
+                        del recorridos[origen]
+
+                # Eliminar la flecha
+                del flechas[flecha_a_eliminar]
+
+        # Actualizar visualización
+        dibujar_grilla(tamaño_grilla)
+        agregar_letras(letras)
+        agregar_flechas(flechas)
+        actualizar_canvas()
 
 # Configuración de flechas
 def mostrar_config_flecha():
@@ -209,17 +313,179 @@ def actualizar_menu_configs():
     for nombre in configuraciones_guardadas.keys():
         menu_config["menu"].add_command(label=nombre, command=lambda n=nombre: [menu_var.set(n), seleccionar_config(n)])
 
+
+###################################################################################
+# ADMINISTRACION DE LOS DATOS
+###################################################################################
+
+archivo_actual = None
+
+def guardar_proyecto():
+    """Guarda el estado actual del proyecto."""
+    global archivo_actual
+    if archivo_actual is None:
+        return guardar_como()
+    
+    try:
+        data = crear_datos_guardado()
+        with open(archivo_actual, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        messagebox.showinfo("Éxito", "Proyecto guardado correctamente")
+        return True
+    except Exception as e:
+        messagebox.showerror("Error", f"Error al guardar el archivo: {str(e)}")
+        return False
+
+def guardar_como():
+    """Guarda el proyecto con un nuevo nombre de archivo."""
+    global archivo_actual
+    filename = filedialog.asksaveasfilename(
+        defaultextension=".puzzle",
+        filetypes=[("Puzzle files", "*.puzzle"), ("All files", "*.*")]
+    )
+    
+    if filename:
+        archivo_actual = filename
+        return guardar_proyecto()
+    return False
+
+def crear_datos_guardado():
+    """Crea la estructura de datos para guardar."""
+    return {
+        "metadata": {
+            "version": "1.0",
+            "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "grid_size": tamaño_grilla
+        },
+        "elements": {
+            "squares": [
+                {
+                    "position": list(letra["pos"]),
+                    "text": letra["texto"],
+                    "color": letra["color"],
+                    "background": letra["fondo"]
+                }
+                for letra in letras
+            ],
+            "arrows": [
+                {
+                    "origin": list(flecha["origen"]),
+                    "destination": list(flecha["destino"]),
+                    "direction": flecha["dir"],
+                    "config": {
+                        "color": flecha["config"]["color"],
+                        "thickness": flecha["config"]["grosor"],
+                        "head_size": flecha["config"]["punta"]
+                    }
+                }
+                for flecha in flechas
+            ]
+        },
+        "routes": {
+            f"{key[0]},{key[1]}": value
+            for key, value in recorridos.items()
+        }
+    }
+
+def abrir_proyecto():
+    """Abre un archivo de proyecto guardado."""
+    global archivo_actual, tamaño_grilla, letras, flechas, recorridos
+    
+    filename = filedialog.askopenfilename(
+        defaultextension=".puzzle",
+        filetypes=[("Puzzle files", "*.puzzle"), ("All files", "*.*")]
+    )
+    
+    if not filename:
+        return False
+    
+    try:
+        with open(filename, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            
+        # Validar versión
+        if data.get("metadata", {}).get("version") != "1.0":
+            raise ValueError("Versión de archivo no compatible")
+        
+        # Cargar datos
+        tamaño_grilla = data["metadata"]["grid_size"]
+        
+        # Cargar cuadros
+        letras = [
+            {
+                "pos": tuple(square["position"]),
+                "texto": square["text"],
+                "color": square["color"],
+                "fondo": square["background"]
+            }
+            for square in data["elements"]["squares"]
+        ]
+        
+        # Cargar flechas
+        flechas = [
+            {
+                "origen": tuple(arrow["origin"]),
+                "destino": tuple(arrow["destination"]),
+                "dir": arrow["direction"],
+                "config": {
+                    "color": arrow["config"]["color"],
+                    "grosor": arrow["config"]["thickness"],
+                    "punta": arrow["config"]["head_size"]
+                }
+            }
+            for arrow in data["elements"]["arrows"]
+        ]
+        
+        # Cargar recorridos
+        recorridos = {
+            tuple(map(int, key.split(","))): value
+            for key, value in data["routes"].items()
+        }
+        
+        archivo_actual = filename
+        
+        # Actualizar visualización
+        dibujar_grilla(tamaño_grilla)
+        agregar_letras(letras)
+        agregar_flechas(flechas)
+        actualizar_canvas()
+        
+        return True
+        
+    except Exception as e:
+        messagebox.showerror("Error", f"Error al abrir el archivo: {str(e)}")
+        return False
+
+
+###################################################################################
 # Interfaz
 root = tk.Tk()
 root.title("Editor de Grilla")
 root.geometry("1000x700")
 
+# Agregar barra de menú
+barra_menu = tk.Menu(root)
+root.config(menu=barra_menu)
+
+# Menú Archivo
+menu_archivo = tk.Menu(barra_menu, tearoff=0)
+barra_menu.add_cascade(label="Archivo", menu=menu_archivo)
+menu_archivo.add_command(label="Nuevo", command=crear_grilla)
+menu_archivo.add_command(label="Abrir", command=abrir_proyecto, accelerator="Ctrl+O")
+menu_archivo.add_command(label="Guardar", command=guardar_proyecto, accelerator="Ctrl+S")
+menu_archivo.add_command(label="Guardar como...", command=guardar_como, accelerator="Ctrl+Shift+S")
+menu_archivo.add_separator()
+menu_archivo.add_command(label="Exportar", command=lambda: print("Exportar - Función por implementar"))
+menu_archivo.add_command(label="Importar Promedios", command=lambda: print("Importar - Función por implementar"))
+menu_archivo.add_separator()
+menu_archivo.add_command(label="Cerrar", command=root.quit)
+
 panel_controles = tk.Frame(root, width=200, bg="lightgray")
 panel_controles.pack(side=tk.LEFT, fill=tk.Y)
 
-tk.Button(panel_controles, text="Crear Grilla", command=crear_grilla).pack(pady=10, fill=tk.X)
 tk.Button(panel_controles, text="Agregar Cuadro", command=activar_modo_agregar_cuadro).pack(pady=10, fill=tk.X)
 tk.Button(panel_controles, text="Agregar Flecha", command=activar_modo_agregar_flecha).pack(pady=10, fill=tk.X)
+tk.Button(panel_controles, text="Eliminar elemento", command=activar_modo_eliminar).pack(pady=10, fill=tk.X)
 
 panel_config_flecha = tk.LabelFrame(panel_controles, text="Config. Flechas", bg="white")
 tk.Label(panel_config_flecha, text="Color:", bg="white").pack(anchor="w")
@@ -252,5 +518,8 @@ canvas.mpl_connect("button_press_event", manejar_click)
 # Iniciar
 dibujar_grilla(tamaño_grilla)
 actualizar_canvas()
+root.bind('<Control-o>', lambda e: abrir_proyecto())
+root.bind('<Control-s>', lambda e: guardar_proyecto())
+root.bind('<Control-S>', lambda e: guardar_como())
 root.mainloop()
 

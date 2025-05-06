@@ -1,0 +1,41 @@
+{
+    "metadata": {
+        "version": "1.0",
+        "date_created": "2025-05-05 20:20:58",
+        "grid_size": 8
+    },
+    "elements": {
+        "squares": [
+            {
+                "position": [
+                    4,
+                    0
+                ],
+                "text": "A",
+                "color": "white",
+                "background": "black"
+            }
+        ],
+        "arrows": [
+            {
+                "origin": [
+                    4,
+                    0
+                ],
+                "destination": [
+                    4,
+                    7
+                ],
+                "direction": 0,
+                "config": {
+                    "color": "black",
+                    "thickness": 4.0,
+                    "head_size": 0.85
+                }
+            }
+        ]
+    },
+    "routes": {
+        "4,0": 7
+    }
+}
