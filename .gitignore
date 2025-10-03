@@ -1,0 +1,16 @@
+# Entorno virtual de Python
+env/
+venv/
+*.venv
+
+# Archivos de configuración específicos del IDE
+.vscode/
+.idea/
+
+# Archivos de caché de Python
+__pycache__/
+*.pyc
+
+# Inputs y outputs
+input/
+output/
