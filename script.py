@@ -8,6 +8,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import json
 import os
 from datetime import datetime
+from generateSet import ImportWindow  
 
 
 # Configuración inicial
@@ -498,9 +499,7 @@ def exportar_imagen(modo="normal", filename=None):
                     temp_ax.text(x + 0.5, y + 0.5, str(recorridos[(x, y)]), 
                         ha='center', va='center', color='white', 
                         fontsize=180/tamaño_grilla, weight='bold')
-                        
-        elif modo == "completo_aqua":
-            # Versión completa con números en verde claro
+        else:
             # Primero dibujamos las flechas para que queden detrás de los cuadros
             for flecha in flechas:
                 origen = flecha["origen"]
@@ -509,20 +508,15 @@ def exportar_imagen(modo="normal", filename=None):
                 x2, y2 = destino
                 direction = flecha["dir"]
                 config = flecha["config"]
-
+                # Lógica para dibujar la flecha desde el borde de la celda
                 if direction == 0:  # Vertical hacia abajo
-                    xi = 0.5
-                    yi = 1
+                    xi = 0.5; yi = 1
                 elif direction == 1:  # Vertical hacia arriba
-                    xi = 0.5
-                    yi = 0
+                    xi = 0.5; yi = 0
                 elif direction == 2:  # Horizontal hacia derecha
-                    xi = 1
-                    yi = 0.5
+                    xi = 1; yi = 0.5
                 elif direction == 3:  # Horizontal hacia izquierda
-                    xi = 0
-                    yi = 0.5
-
+                    xi = 0; yi = 0.5
                 temp_ax.arrow(
                     x1 + xi, y1 + yi,
                     x2 - x1, y2 - y1,
@@ -535,29 +529,32 @@ def exportar_imagen(modo="normal", filename=None):
                     zorder=3
                 )
 
-            # Luego dibujamos los cuadros y números
-            for letra in letras:
-                x, y = letra["pos"]
-                temp_ax.add_patch(patches.Rectangle((x, y), 1, 1, 
-                    facecolor=letra["fondo"], edgecolor='black', zorder=4))
-                if (x, y) in recorridos:
-                    temp_ax.text(x + 0.5, y + 0.5, str(recorridos[(x, y)]), 
-                        ha='center', va='center', color='#b9f4b2', 
-                        fontsize=180/tamaño_grilla, weight='bold', zorder=5)
-            
-            # Agregar flechas
-            for flecha in flechas:
-                origen = flecha["origen"]
-                destino = flecha["destino"]
-                temp_ax.annotate("", xy=(destino[0] + 0.5, destino[1] + 0.5),
-                    xytext=(origen[0] + 0.5, origen[1] + 0.5),
-                    arrowprops=dict(arrowstyle='->',
-                                  color=flecha["config"]["color"],
-                                  lw=flecha["config"]["grosor"]))
+            if modo == "completo_aqua":
+                # Versión completa con números en verde claro
+                # Luego dibujamos los cuadros y números
+                for letra in letras:
+                    x, y = letra["pos"]
+                    temp_ax.add_patch(patches.Rectangle((x, y), 1, 1, 
+                        facecolor=letra["fondo"], edgecolor='black', zorder=4))
+                    if (x, y) in recorridos:
+                        temp_ax.text(x + 0.5, y + 0.5, str(recorridos[(x, y)]), 
+                            ha='center', va='center', color='#b9f4b2', 
+                            fontsize=180/tamaño_grilla, weight='bold', zorder=5)
+                
+            elif modo == "promedios":
+                # Versión completa para output actividad promedios
+                # Solo cuadros con letras
+                for letra in letras:
+                    x, y = letra["pos"]
+                    temp_ax.add_patch(patches.Rectangle((x, y), 1, 1, 
+                        facecolor=letra["fondo"], edgecolor='black'))
+                    temp_ax.text(x + 0.5, y + 0.5, letra["texto"], 
+                        ha='center', va='center', color=letra["color"], 
+                        fontsize=180/tamaño_grilla, weight='bold')
         
         # Configuración común para todos los modos
-        temp_ax.set_xlim(-0.5, tamaño_grilla + 0.5)
-        temp_ax.set_ylim(-0.5, tamaño_grilla + 0.5)
+        temp_ax.set_xlim(0, tamaño_grilla)
+        temp_ax.set_ylim(0, tamaño_grilla)
         temp_ax.set_aspect('equal')
         temp_ax.axis('off')
         
@@ -587,6 +584,9 @@ def exportar_todas_versiones():
         
         # Exportar versión S (completa con números aqua)
         exportar_imagen("completo_aqua", filename=os.path.join(directory, "puzzle_S.png"))
+
+        # Exportar versión S (completa con números aqua)
+        exportar_imagen("promedios", filename=os.path.join(directory, "AD25 #.png"))
         
         messagebox.showinfo("Éxito", "Todas las versiones han sido exportadas correctamente")
         return True
@@ -624,11 +624,13 @@ menu_exportar.add_command(label="P version",
     command=lambda: exportar_imagen("solo_numeros"))
 menu_exportar.add_command(label="S version", 
     command=lambda: exportar_imagen("completo_aqua"))
+menu_exportar.add_command(label="Output version", 
+    command=lambda: exportar_imagen("promedios"))
 menu_exportar.add_separator()
 menu_exportar.add_command(label="Exportar todas las versiones", 
     command=lambda: exportar_todas_versiones())
 
-menu_archivo.add_command(label="Importar Promedios", command=lambda: print("Importar - Función por implementar"))
+menu_archivo.add_command(label="Importar Promedios", command=lambda: ImportWindow(root))
 menu_archivo.add_separator()
 menu_archivo.add_command(label="Cerrar", command=root.quit)
 
