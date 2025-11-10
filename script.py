@@ -188,6 +188,7 @@ def manejar_click(event):
         return
     x = int(event.xdata)
     y = int(event.ydata)
+    print([x,y])
     if not (0 <= x < tamaño_grilla and 0 <= y < tamaño_grilla):
         return
 
@@ -585,7 +586,7 @@ def exportar_todas_versiones():
         # Exportar versión S (completa con números aqua)
         exportar_imagen("completo_aqua", filename=os.path.join(directory, "puzzle_S.png"))
 
-        # Exportar versión S (completa con números aqua)
+        # Exportar versión output (Es la imagen que cada becario deberia de subir como resultado final)
         exportar_imagen("promedios", filename=os.path.join(directory, "AD25 #.png"))
         
         messagebox.showinfo("Éxito", "Todas las versiones han sido exportadas correctamente")
